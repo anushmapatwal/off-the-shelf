@@ -1,18 +1,21 @@
 import React, { useCallback, useEffect, useRef } from 'react'
 
-/* ---------- geometry helpers ---------- */
+/* The clock is Anushma's illustration (public/art/clock-face.webp) with the
+   hands, the time arc and the drag handle drawn over it in SVG.
+   Coordinates below are in the illustration's own pixel space (2400 x 3040),
+   measured from the artwork: the dial centre and radius. */
 
-const CX = 180
-const CY = 208
-const R_BEZEL = 148
-const R_DIAL = 126
-const R_ARC = 104
-const R_NUM = 94
-const R_TICK = 118
+const VB_W = 2400
+const VB_H = 3040
+const CX = 1188
+const CY = 1747
+const R_DIAL = 795
 
-const TAU = Math.PI * 2
+const R_ARC = R_DIAL * 0.84
+const R_KNOB = R_DIAL * 0.84
+const HOUR_LEN = R_DIAL * 0.45
+const MIN_LEN = R_DIAL * 0.66
 
-// angle in degrees, 0 = 12 o'clock, clockwise
 function pointAt(angleDeg, radius) {
   const a = ((angleDeg - 90) * Math.PI) / 180
   return [CX + radius * Math.cos(a), CY + radius * Math.sin(a)]
@@ -26,7 +29,6 @@ function arcPath(startDeg, sweepDeg, radius) {
   return `M ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2}`
 }
 
-// minute-hand angle for a Date
 export function minuteAngle(date) {
   return (date.getMinutes() + date.getSeconds() / 60) * 6
 }
@@ -35,39 +37,41 @@ export function hourAngle(date) {
   return ((date.getHours() % 12) + date.getMinutes() / 60) * 30
 }
 
-/* ---------- component ---------- */
+/* a hand drawn as a tapered blade, like the illustration's */
+function handPath(angleDeg, length, baseWidth) {
+  const [tipX, tipY] = pointAt(angleDeg, length)
+  const [lx, ly] = pointAt(angleDeg - 90, baseWidth / 2)
+  const [rx, ry] = pointAt(angleDeg + 90, baseWidth / 2)
+  const [bx, by] = pointAt(angleDeg + 180, baseWidth * 0.6)
+  return `M ${lx} ${ly} L ${tipX} ${tipY} L ${rx} ${ry} L ${bx} ${by} Z`
+}
 
 export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dragging, setDragging }) {
-  const svgRef = useRef(null)
+  const wrapRef = useRef(null)
   const lastSnap = useRef(null)
 
   const minutesLeft = Math.max(0, (endMs - now.getTime()) / 60000)
   const startAngle = minuteAngle(now)
   const sweep = minutesLeft * 6
 
-  /* convert a pointer position into an end timestamp */
   const pointToEnd = useCallback(
     (clientX, clientY) => {
-      const svg = svgRef.current
-      if (!svg) return null
-      const rect = svg.getBoundingClientRect()
-      // map client px -> viewBox units
-      const vbX = ((clientX - rect.left) / rect.width) * 360
-      const vbY = ((clientY - rect.top) / rect.height) * 400
+      const el = wrapRef.current
+      if (!el) return null
+      const rect = el.getBoundingClientRect()
+      const vbX = ((clientX - rect.left) / rect.width) * VB_W
+      const vbY = ((clientY - rect.top) / rect.height) * VB_H
       const dx = vbX - CX
       const dy = vbY - CY
-      if (Math.hypot(dx, dy) < 12) return null
-      let ang = (Math.atan2(dx, -dy) * 180) / Math.PI // 0 at 12, clockwise
+      if (Math.hypot(dx, dy) < 80) return null
+      let ang = (Math.atan2(dx, -dy) * 180) / Math.PI
       if (ang < 0) ang += 360
 
-      const rel = (((ang - startAngle) % 360) + 360) % 360 // minutes past now, 0..60
+      const rel = (((ang - startAngle) % 360) + 360) % 360
       const base = rel / 6
-      const current = minutesLeft
-      const k = Math.max(0, Math.round((current - base) / 60)) // which hour we're in
-      let mins = base + k * 60
-      mins = Math.max(minMinutes, Math.min(maxMinutes, mins))
+      const k = Math.max(0, Math.round((minutesLeft - base) / 60))
+      let mins = Math.max(minMinutes, Math.min(maxMinutes, base + k * 60))
 
-      // snap the END TIME to the nearest 5 minutes on the clock
       const raw = now.getTime() + mins * 60000
       const snapped = Math.round(raw / 300000) * 300000
       const snappedMins = (snapped - now.getTime()) / 60000
@@ -108,7 +112,6 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
     setDragging(false)
   }
 
-  /* keyboard: arrows nudge by 5 minutes */
   const onKeyDown = (e) => {
     const step = 5 * 60000
     if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
@@ -131,44 +134,12 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
   }, [setDragging])
 
   const endDate = new Date(endMs)
-  const endHandAngle = minuteAngle(endDate)
-  const [knobX, knobY] = pointAt(endHandAngle, R_TICK)
+  const [knobX, knobY] = pointAt(minuteAngle(endDate), R_KNOB)
   const overAnHour = minutesLeft > 60
 
-  const ticks = []
-  for (let i = 0; i < 60; i++) {
-    const major = i % 5 === 0
-    const [x1, y1] = pointAt(i * 6, major ? R_DIAL - 16 : R_DIAL - 10)
-    const [x2, y2] = pointAt(i * 6, R_DIAL - 4)
-    ticks.push(
-      <line
-        key={i}
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
-        stroke="#453A2E"
-        strokeWidth={major ? 3.4 : 1.6}
-        strokeLinecap="round"
-        opacity={major ? 0.9 : 0.55}
-      />
-    )
-  }
-
-  const numbers = []
-  for (let n = 1; n <= 12; n++) {
-    const [x, y] = pointAt(n * 30, R_NUM)
-    numbers.push(
-      <text key={n} x={x} y={y + 8} textAnchor="middle" className="clock-num">
-        {n}
-      </text>
-    )
-  }
-
   return (
-    <svg
-      ref={svgRef}
-      viewBox="0 0 360 400"
+    <div
+      ref={wrapRef}
       className={`clock ${dragging ? 'is-dragging' : ''}`}
       role="slider"
       tabIndex={0}
@@ -176,129 +147,53 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
       aria-valuemin={minMinutes}
       aria-valuemax={maxMinutes}
       aria-valuenow={Math.round(minutesLeft)}
-      aria-valuetext={`Until ${endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, about ${Math.round(minutesLeft)} minutes`}
+      aria-valuetext={`Until ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}, about ${Math.round(minutesLeft)} minutes`}
       onKeyDown={onKeyDown}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
     >
-      <defs>
-        <filter id="grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="7" />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
-        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="8" stdDeviation="9" floodColor="#3B2A18" floodOpacity="0.22" />
-        </filter>
-      </defs>
+      <img className="clock-art" src="/art/clock-face.webp" alt="" draggable="false" />
 
-      {/* ground shadow */}
-      <ellipse cx={CX} cy={CY + R_BEZEL + 30} rx="120" ry="15" fill="#4A5340" opacity="0.22" />
-
-      <g filter="url(#softShadow)">
-        {/* feet */}
-        <g stroke="#A2A79C" strokeWidth="12" strokeLinecap="round">
-          <line x1={CX - 82} y1={CY + 118} x2={CX - 102} y2={CY + 164} />
-          <line x1={CX + 82} y1={CY + 118} x2={CX + 102} y2={CY + 164} />
-        </g>
-        <g stroke="#6F766A" strokeWidth="12" strokeLinecap="round" opacity="0.35">
-          <line x1={CX - 96} y1={CY + 150} x2={CX - 102} y2={CY + 164} />
-          <line x1={CX + 96} y1={CY + 150} x2={CX + 102} y2={CY + 164} />
-        </g>
-
-        {/* handle */}
+      <svg className="clock-layer" viewBox={`0 0 ${VB_W} ${VB_H}`} aria-hidden="true">
+        {/* the time you have */}
+        {overAnHour && (
+          <circle cx={CX} cy={CY} r={R_ARC} fill="none" stroke="#4280CF" strokeWidth="52" opacity="0.22" />
+        )}
         <path
-          d={`M ${CX - 56} ${CY - 128} a 56 50 0 0 1 112 0`}
-          stroke="#A2A79C"
-          strokeWidth="11"
+          className="arc"
+          d={arcPath(startAngle, overAnHour ? sweep - 360 : sweep, R_ARC)}
           fill="none"
+          stroke="#4280CF"
+          strokeWidth="52"
           strokeLinecap="round"
+          opacity="0.75"
         />
 
-        {/* bells */}
-        <g fill="#D9523F" stroke="#8E3325" strokeWidth="3.5" strokeLinejoin="round">
-          <ellipse cx={CX - 108} cy={CY - 116} rx="46" ry="36" transform={`rotate(-40 ${CX - 108} ${CY - 116})`} />
-          <ellipse cx={CX + 108} cy={CY - 116} rx="46" ry="36" transform={`rotate(40 ${CX + 108} ${CY - 116})`} />
+        {/* now */}
+        <g fill="#1F1B18">
+          <path d={handPath(hourAngle(now), HOUR_LEN, 58)} />
+          <path d={handPath(startAngle, MIN_LEN, 42)} />
         </g>
 
-        {/* body */}
-        <circle cx={CX} cy={CY} r={R_BEZEL} fill="#D9523F" stroke="#8E3325" strokeWidth="3.5" />
-        <circle cx={CX} cy={CY} r={R_BEZEL - 11} fill="none" stroke="#EE7C64" strokeWidth="4" opacity="0.5" />
-        <circle cx={CX} cy={CY} r={R_DIAL} fill="#FBF3DF" stroke="#8E3325" strokeWidth="3" />
-      </g>
+        {/* the end time you drag */}
+        <g className="end-hand">
+          <line
+            x1={CX}
+            y1={CY}
+            x2={knobX}
+            y2={knobY}
+            stroke="#E2412B"
+            strokeWidth="26"
+            strokeLinecap="round"
+          />
+          <circle cx={knobX} cy={knobY} r="62" fill="#E2412B" stroke="#FFFFFF" strokeWidth="14" />
+        </g>
 
-      {/* paper grain on the dial */}
-      <circle
-        cx={CX}
-        cy={CY}
-        r={R_DIAL - 2}
-        filter="url(#grain)"
-        opacity="0.16"
-        style={{ mixBlendMode: 'multiply' }}
-      />
-
-      {ticks}
-      {numbers}
-
-      {/* the time you have */}
-      {overAnHour && (
-        <circle cx={CX} cy={CY} r={R_ARC} fill="none" stroke="#F2B233" strokeWidth="13" opacity="0.32" />
-      )}
-      <path
-        d={arcPath(startAngle, overAnHour ? sweep - 360 : sweep, R_ARC)}
-        fill="none"
-        stroke="#F0A82A"
-        strokeWidth="14"
-        strokeLinecap="round"
-        opacity="0.92"
-        className="arc"
-      />
-
-      {/* now hands */}
-      <g stroke="#33291F" strokeLinecap="round" className="now-hands">
-        <line
-          x1={CX}
-          y1={CY}
-          x2={pointAt(hourAngle(now), 58)[0]}
-          y2={pointAt(hourAngle(now), 58)[1]}
-          strokeWidth="9"
-        />
-        <line
-          x1={CX}
-          y1={CY}
-          x2={pointAt(startAngle, 88)[0]}
-          y2={pointAt(startAngle, 88)[1]}
-          strokeWidth="6"
-        />
-      </g>
-
-      {/* end-time hand */}
-      <g className="end-hand">
-        <line
-          x1={CX}
-          y1={CY}
-          x2={knobX}
-          y2={knobY}
-          stroke="#B4791F"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-        <circle cx={knobX} cy={knobY} r="13" fill="#F0A82A" stroke="#8C5A12" strokeWidth="2.5" />
-        <circle cx={knobX} cy={knobY} r="5" fill="#FFF3D4" opacity="0.8" />
-      </g>
-
-      <circle cx={CX} cy={CY} r="9.5" fill="#33291F" />
-      <circle cx={CX} cy={CY} r="3.5" fill="#FBF3DF" />
-
-      {/* interaction surface */}
-      <circle
-        cx={CX}
-        cy={CY}
-        r={R_BEZEL}
-        fill="transparent"
-        className="hit"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-      />
-    </svg>
+        <circle cx={CX} cy={CY} r="44" fill="#1F1B18" />
+        <circle cx={CX} cy={CY} r="16" fill="#FDFBF4" />
+      </svg>
+    </div>
   )
 }

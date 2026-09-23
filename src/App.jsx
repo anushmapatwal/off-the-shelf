@@ -1,32 +1,21 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Clock from './Clock.jsx'
 import Logo from './Logo.jsx'
+import Card from './Card.jsx'
 import { countThatFit, bestFit } from './shelf.js'
 
 const MIN_MINUTES = 3
 const MAX_MINUTES = 180
 const DEFAULT_MINUTES = 25
 
-function greetingFor(date) {
-  const h = date.getHours()
-  if (h < 5) return 'Still up'
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  if (h < 21) return 'Good evening'
-  return 'Good evening'
-}
-
 function formatTime(date) {
-  return date
-    .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    .replace(' ', '')
-    .toLowerCase()
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 function formatDuration(mins) {
   const m = Math.max(0, Math.round(mins))
   if (m >= MAX_MINUTES) return 'plenty of time'
-  if (m < 60) return `${m} minutes`
+  if (m < 60) return `${m} mins`
   const h = Math.floor(m / 60)
   const rem = m % 60
   if (rem === 0) return h === 1 ? '1 hour' : `${h} hours`
@@ -36,33 +25,17 @@ function formatDuration(mins) {
 export default function App() {
   const [now, setNow] = useState(() => new Date())
   const [dragging, setDragging] = useState(false)
-  const [revealed, setRevealed] = useState(false)
-  const [touched, setTouched] = useState(false)
+  const [sheet, setSheet] = useState(null) // 'shelf' | 'suggest' | null
 
-  // the suggested default: now + 25 min, snapped to the next 5-minute mark
   const [endMs, setEndMs] = useState(() => {
     const raw = Date.now() + DEFAULT_MINUTES * 60000
     return Math.round(raw / 300000) * 300000
   })
 
-  const name = useMemo(() => {
-    try {
-      return localStorage.getItem('ots.name') || ''
-    } catch {
-      return ''
-    }
-  }, [])
-
-  // keep "now" fresh so the window quietly counts down
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 10000)
     return () => clearInterval(t)
   }, [])
-
-  const handleEnd = (ms) => {
-    setTouched(true)
-    setEndMs(ms)
-  }
 
   const minutesLeft = Math.max(0, (endMs - now.getTime()) / 60000)
   const endDate = new Date(endMs)
@@ -72,79 +45,80 @@ export default function App() {
   return (
     <div className="scene">
       <div className="scene-bg" aria-hidden="true" />
-      <div className="scene-wash" aria-hidden="true" />
+      <div className="scene-tint" aria-hidden="true" />
 
-      <main className={`stage ${revealed ? 'is-revealed' : ''}`}>
-        <section className="panel">
+      <main className="stage">
+        <Card>
           <Logo />
 
-          <p className="greeting">
-            {greetingFor(now)}
-            {name ? `, ${name}` : ''}.
-          </p>
-
-          <h1 className="headline">How much time do you have?</h1>
+          <p className="headline">How much time do you have?</p>
 
           <div className="readout" aria-live="polite">
-            <span className="readout-time">Until {formatTime(endDate)}</span>
-            <span className="readout-dot">·</span>
-            <span className="readout-dur">{formatDuration(minutesLeft)}</span>
+            <span>Until {formatTime(endDate)}</span>
+            <span className="readout-dot" aria-hidden="true" />
+            <span>{formatDuration(minutesLeft)}</span>
           </div>
 
-          <p className="hint">
-            {touched
-              ? `${fits} ${fits === 1 ? 'thing fits' : 'things fit'} in that.`
-              : `Set to ${formatTime(endDate)} — about ${formatDuration(minutesLeft)}. Drag the brass hand to change it.`}
-          </p>
+          <p className="hint">Drag the clock hand to change the time.</p>
 
           <div className="actions">
-            <button className="btn-primary" onClick={() => setRevealed(true)}>
-              Show me
+            <button className="btn-solid" onClick={() => setSheet('shelf')}>
+              From your shelf
             </button>
-            <button className="btn-quiet" onClick={() => setRevealed(true)}>
-              Just show my shelf
+            <button className="btn-outline" onClick={() => setSheet('suggest')}>
+              Suggest Me
             </button>
           </div>
-        </section>
+        </Card>
 
-        <section className="clock-wrap">
+        <div className="clock-wrap">
           <Clock
             now={now}
             endMs={endMs}
-            setEndMs={handleEnd}
+            setEndMs={setEndMs}
             minMinutes={MIN_MINUTES}
             maxMinutes={MAX_MINUTES}
             dragging={dragging}
             setDragging={setDragging}
           />
-          <p className="clock-caption">
-            Now {formatTime(now)} — drag to when you need to stop
-          </p>
-        </section>
+        </div>
       </main>
 
-      {revealed && (
-        <div className="sheet-backdrop" onClick={() => setRevealed(false)}>
+      {sheet && (
+        <div className="sheet-backdrop" onClick={() => setSheet(null)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <p className="sheet-kicker">Off the shelf for you</p>
-            {pick ? (
+            {sheet === 'shelf' ? (
               <>
-                <h2 className="sheet-title">{pick.title}</h2>
-                <p className="sheet-meta">
-                  {pick.type} · {pick.minutes} min — fits your {formatDuration(minutesLeft)} with room to spare
+                <p className="sheet-kicker">Off the shelf for you</p>
+                {pick ? (
+                  <>
+                    <h2 className="sheet-title">{pick.title}</h2>
+                    <p className="sheet-meta">
+                      {pick.type} · {pick.minutes} min — fits your {formatDuration(minutesLeft)}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="sheet-title">Nothing fits that window yet</h2>
+                    <p className="sheet-meta">Splitting long things into parts comes later.</p>
+                  </>
+                )}
+                <p className="sheet-note">
+                  The shelf itself lands in the next session. For now the clock does the real work:
+                  it knows you have until {formatTime(endDate)}, and that {fits} of 7 things fit.
                 </p>
               </>
             ) : (
               <>
-                <h2 className="sheet-title">Nothing fits that window yet</h2>
-                <p className="sheet-meta">Session 2 adds splitting long things into parts.</p>
+                <p className="sheet-kicker">Off my shelf</p>
+                <h2 className="sheet-title">Suggestions from the Substack</h2>
+                <p className="sheet-note">
+                  This is where posts from anushmaa.substack.com will appear, picked to fit your{' '}
+                  {formatDuration(minutesLeft)}.
+                </p>
               </>
             )}
-            <p className="sheet-note">
-              The shelf itself lands in the next session. For now the clock is doing the real work:
-              it knows you have until {formatTime(endDate)}, and that {fits} of 7 things fit.
-            </p>
-            <button className="btn-primary" onClick={() => setRevealed(false)}>
+            <button className="btn-solid" onClick={() => setSheet(null)}>
               Back to the clock
             </button>
           </div>
