@@ -32,7 +32,7 @@ export default function ShelfScene({ items, best, rest, minutesLabel, endLabel, 
       <div className="shelf-bg" aria-hidden="true" />
 
       <div className="book">
-        <img className="book-art" src="/art/book.webp" alt="" draggable="false" />
+        <img className="book-art" src="/art/book-v2.webp" alt="" draggable="false" />
 
         <div className="book-pages">
           <div className="book-page book-page-left">

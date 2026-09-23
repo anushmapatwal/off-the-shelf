@@ -3,7 +3,9 @@ import Clock from './Clock.jsx'
 import Logo from './Logo.jsx'
 import Card from './Card.jsx'
 import ShelfScene from './ShelfScene.jsx'
-import { thatFit, bestFit } from './shelf.js'
+import SaveDialog from './SaveDialog.jsx'
+import { loadSaved, persist } from './storage.js'
+import { SAMPLE_SHELF, thatFit, bestFit } from './shelf.js'
 
 const MIN_MINUTES = 3
 const MAX_MINUTES = 180
@@ -26,7 +28,8 @@ function formatDuration(mins) {
 export default function App() {
   const [now, setNow] = useState(() => new Date())
   const [dragging, setDragging] = useState(false)
-  const [sheet, setSheet] = useState(null) // 'shelf' | 'suggest' | null
+  const [sheet, setSheet] = useState(null) // 'shelf' | 'save' | null
+  const [saved, setSaved] = useState(() => loadSaved())
 
   const [endMs, setEndMs] = useState(() => {
     const raw = Date.now() + DEFAULT_MINUTES * 60000
@@ -38,11 +41,19 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
+  const shelf = [...saved, ...SAMPLE_SHELF]
   const minutesLeft = Math.max(0, (endMs - now.getTime()) / 60000)
   const endDate = new Date(endMs)
-  const fits = thatFit(minutesLeft)
-  const pick = bestFit(minutesLeft)
+  const fits = thatFit(minutesLeft, shelf)
+  const pick = bestFit(minutesLeft, shelf)
   const rest = fits.filter((i) => i.id !== pick?.id)
+
+  const addToShelf = (item) => {
+    const next = [item, ...saved]
+    setSaved(next)
+    persist(next)
+    setSheet('shelf')
+  }
 
   return (
     <div className="scene">
@@ -67,8 +78,8 @@ export default function App() {
             <button className="btn-solid" onClick={() => setSheet('shelf')}>
               From your shelf
             </button>
-            <button className="btn-outline" onClick={() => setSheet('suggest')}>
-              Suggest Me
+            <button className="btn-outline" onClick={() => setSheet('save')}>
+              Save to shelf
             </button>
           </div>
         </Card>
@@ -97,21 +108,7 @@ export default function App() {
         />
       )}
 
-      {sheet === 'suggest' && (
-        <div className="sheet-backdrop" onClick={() => setSheet(null)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <p className="sheet-kicker">Off my shelf</p>
-            <h2 className="sheet-title">Suggestions from the Substack</h2>
-            <p className="sheet-note">
-              This is where posts from anushmaa.substack.com will appear, picked to fit your{' '}
-              {formatDuration(minutesLeft)}.
-            </p>
-            <button className="btn-solid" onClick={() => setSheet(null)}>
-              Back to the clock
-            </button>
-          </div>
-        </div>
-      )}
+      {sheet === 'save' && <SaveDialog onSave={addToShelf} onClose={() => setSheet(null)} />}
 
     </div>
   )

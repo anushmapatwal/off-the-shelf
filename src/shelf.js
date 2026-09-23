@@ -28,16 +28,16 @@ export const SAMPLE_SHELF = [
   },
 ]
 
-export function thatFit(minutes) {
-  return SAMPLE_SHELF.filter((item) => item.minutes <= minutes)
+export function thatFit(minutes, items = SAMPLE_SHELF) {
+  return items.filter((item) => item.minutes <= minutes)
 }
 
-export function countThatFit(minutes) {
-  return thatFit(minutes).length
+export function countThatFit(minutes, items = SAMPLE_SHELF) {
+  return thatFit(minutes, items).length
 }
 
-export function bestFit(minutes) {
-  const fits = thatFit(minutes)
+export function bestFit(minutes, items = SAMPLE_SHELF) {
+  const fits = thatFit(minutes, items)
   if (!fits.length) return null
   // the closest fit: the longest thing that still fits the window
   return fits.reduce((a, b) => (b.minutes > a.minutes ? b : a))
