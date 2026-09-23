@@ -1,22 +1,44 @@
-// Placeholder shelf so the clock can say something true about what fits.
-// Session 2 replaces this with real saved items in local storage.
+// The shelf. For now these are the first real saves; session 3 replaces this
+// with saving from the app, kept on your own device.
 
 export const SAMPLE_SHELF = [
-  { id: 's1', title: 'The tyranny of the marginal user', type: 'article', minutes: 8 },
-  { id: 's2', title: 'A thread on pricing for solo designers', type: 'thread', minutes: 3 },
-  { id: 's3', title: 'How Figma builds product', type: 'podcast', minutes: 42 },
-  { id: 's4', title: 'Motion design for interfaces', type: 'video', minutes: 12 },
-  { id: 's5', title: 'Shape Up, chapter 2', type: 'book', minutes: 28 },
-  { id: 's6', title: 'Why your onboarding leaks', type: 'article', minutes: 6 },
-  { id: 's7', title: 'Notes on taste', type: 'article', minutes: 15 },
+  {
+    id: 's1',
+    title: 'Design tokens need more than semantics',
+    source: 'Nate Baldwin',
+    type: 'Article',
+    minutes: 8,
+    url: 'https://medium.com/@NateBaldwin/design-tokens-need-more-than-semantics-0e5a85df0d33',
+  },
+  {
+    id: 's2',
+    title: '10 websites better than another hour of doomscrolling',
+    source: 'Rafia Naseem',
+    type: 'Article',
+    minutes: 6,
+    url: 'https://medium.com/the-sunday-journal/10-websites-better-than-another-hour-of-doomscrolling-828832e25439',
+  },
+  {
+    id: 's3',
+    title: 'Why Bloody Mary Hated Queen Elizabeth I | Two Sisters',
+    source: 'Absolute History',
+    type: 'Video',
+    minutes: 43,
+    url: 'https://youtu.be/IFm4AE1Hm4Y?si=6AOdFT-Q9H0EllVW',
+  },
 ]
 
+export function thatFit(minutes) {
+  return SAMPLE_SHELF.filter((item) => item.minutes <= minutes)
+}
+
 export function countThatFit(minutes) {
-  return SAMPLE_SHELF.filter((item) => item.minutes <= minutes).length
+  return thatFit(minutes).length
 }
 
 export function bestFit(minutes) {
-  const fits = SAMPLE_SHELF.filter((item) => item.minutes <= minutes)
+  const fits = thatFit(minutes)
   if (!fits.length) return null
+  // the closest fit: the longest thing that still fits the window
   return fits.reduce((a, b) => (b.minutes > a.minutes ? b : a))
 }
