@@ -81,7 +81,7 @@ body {
   display: grid;
   place-items: center;
   padding: clamp(26px, 5vw, 50px) clamp(30px, 6vw, 60px);
-  filter: drop-shadow(0 16px 34px rgba(24, 18, 10, 0.32));
+  filter: drop-shadow(0 8px 20px rgba(48, 36, 20, 0.16));
 }
 
 .card-content {
@@ -387,7 +387,7 @@ body {
   width: min(1120px, 86vw);
   opacity: 0;
   transform: translate(-50%, -50%) translate(-5vw, 8vh) scale(0.12) rotate(-7deg);
-  filter: drop-shadow(0 26px 40px rgba(38, 24, 12, 0.4));
+  filter: drop-shadow(0 18px 34px rgba(38, 24, 12, 0.3));
   transition: opacity 500ms ease, transform 1200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -412,12 +412,12 @@ body {
 
 .book-pages {
   position: absolute;
-  left: 14%;
-  right: 14%;
-  top: 12%;
-  bottom: 16%;
+  left: 13%;
+  right: 13%;
+  top: 16%;
+  bottom: 18%;
   display: flex;
-  gap: 7%;
+  gap: 9%;
   opacity: 0;
   transition: opacity 500ms ease 250ms;
 }
@@ -435,7 +435,7 @@ body {
 }
 
 .page-kicker {
-  margin: 0 0 10px;
+  margin: 0 0 clamp(10px, 1.4vw, 18px);
   font-size: clamp(11px, 1vw, 14px);
   font-weight: 700;
   letter-spacing: 1.6px;
@@ -444,7 +444,7 @@ body {
 }
 
 .page-title {
-  margin: 0 0 6px;
+  margin: 0 0 clamp(6px, 0.8vw, 10px);
   font-size: clamp(17px, 1.9vw, 26px);
   font-weight: 700;
   line-height: 1.15;
@@ -452,14 +452,14 @@ body {
 }
 
 .page-meta {
-  margin: 0 0 12px;
+  margin: 0 0 clamp(12px, 1.6vw, 20px);
   font-size: clamp(12px, 1.1vw, 15px);
   font-weight: 500;
   color: #8a7a63;
 }
 
 .page-reason {
-  margin: 0 0 16px;
+  margin: 0 0 clamp(16px, 2vw, 24px);
   font-size: clamp(12px, 1.15vw, 16px);
   line-height: 1.5;
   color: #5c5044;
@@ -486,7 +486,7 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 0.9vw, 12px);
+  gap: clamp(8px, 1.3vw, 16px);
 }
 
 .page-list a {
@@ -497,7 +497,7 @@ body {
   text-decoration: none;
   color: #3a3128;
   border-bottom: 1px dotted rgba(120, 104, 82, 0.5);
-  padding-bottom: clamp(4px, 0.7vw, 8px);
+  padding-bottom: clamp(6px, 1vw, 12px);
 }
 
 .page-list a:hover .page-list-title {
@@ -546,6 +546,10 @@ body {
   .book {
     width: 96vw;
     top: 44%;
+  }
+
+  .book-pages {
+    gap: 10px;
   }
 
   .book-pages {
