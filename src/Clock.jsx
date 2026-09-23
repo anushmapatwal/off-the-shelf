@@ -147,8 +147,8 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
         y1={y1}
         x2={x2}
         y2={y2}
-        stroke="#241E1A"
-        strokeWidth={major ? 3 : 1.4}
+        stroke="#453A2E"
+        strokeWidth={major ? 3.4 : 1.6}
         strokeLinecap="round"
         opacity={major ? 0.9 : 0.55}
       />
@@ -180,53 +180,59 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
       onKeyDown={onKeyDown}
     >
       <defs>
-        <radialGradient id="dialFill" cx="42%" cy="34%" r="78%">
-          <stop offset="0%" stopColor="#FFF8E6" />
-          <stop offset="70%" stopColor="#F6E6C4" />
-          <stop offset="100%" stopColor="#EAD4AC" />
-        </radialGradient>
-        <linearGradient id="bezelFill" x1="20%" y1="0%" x2="80%" y2="100%">
-          <stop offset="0%" stopColor="#F05A46" />
-          <stop offset="45%" stopColor="#DC3B2C" />
-          <stop offset="100%" stopColor="#B62A20" />
-        </linearGradient>
-        <linearGradient id="metalFill" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#C9CDD2" />
-          <stop offset="50%" stopColor="#9BA2A9" />
-          <stop offset="100%" stopColor="#767C83" />
-        </linearGradient>
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="7" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
         <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#2B1E12" floodOpacity="0.28" />
+          <feDropShadow dx="0" dy="8" stdDeviation="9" floodColor="#3B2A18" floodOpacity="0.22" />
         </filter>
       </defs>
 
       {/* ground shadow */}
-      <ellipse cx={CX} cy={CY + R_BEZEL + 26} rx="126" ry="16" fill="#3C4A33" opacity="0.28" />
+      <ellipse cx={CX} cy={CY + R_BEZEL + 30} rx="120" ry="15" fill="#4A5340" opacity="0.22" />
 
       <g filter="url(#softShadow)">
         {/* feet */}
-        <g stroke="url(#metalFill)" strokeWidth="11" strokeLinecap="round">
-          <line x1={CX - 84} y1={CY + 116} x2={CX - 104} y2={CY + 162} />
-          <line x1={CX + 84} y1={CY + 116} x2={CX + 104} y2={CY + 162} />
+        <g stroke="#A2A79C" strokeWidth="12" strokeLinecap="round">
+          <line x1={CX - 82} y1={CY + 118} x2={CX - 102} y2={CY + 164} />
+          <line x1={CX + 82} y1={CY + 118} x2={CX + 102} y2={CY + 164} />
         </g>
+        <g stroke="#6F766A" strokeWidth="12" strokeLinecap="round" opacity="0.35">
+          <line x1={CX - 96} y1={CY + 150} x2={CX - 102} y2={CY + 164} />
+          <line x1={CX + 96} y1={CY + 150} x2={CX + 102} y2={CY + 164} />
+        </g>
+
+        {/* handle */}
+        <path
+          d={`M ${CX - 56} ${CY - 128} a 56 50 0 0 1 112 0`}
+          stroke="#A2A79C"
+          strokeWidth="11"
+          fill="none"
+          strokeLinecap="round"
+        />
 
         {/* bells */}
-        <g fill="url(#bezelFill)" stroke="#8E1F16" strokeWidth="3">
-          <path d={`M ${CX - 132} ${CY - 86} a 46 40 0 0 1 84 -26 l -70 44 z`} />
-          <path d={`M ${CX + 132} ${CY - 86} a 46 40 0 0 0 -84 -26 l 70 44 z`} />
-        </g>
-
-        {/* hammer + handle */}
-        <g stroke="url(#metalFill)" strokeWidth="9" fill="none" strokeLinecap="round">
-          <path d={`M ${CX - 58} ${CY - 132} a 58 46 0 0 1 116 0`} />
-          <line x1={CX} y1={CY - 152} x2={CX} y2={CY - 128} />
+        <g fill="#D9523F" stroke="#8E3325" strokeWidth="3.5" strokeLinejoin="round">
+          <ellipse cx={CX - 108} cy={CY - 116} rx="46" ry="36" transform={`rotate(-40 ${CX - 108} ${CY - 116})`} />
+          <ellipse cx={CX + 108} cy={CY - 116} rx="46" ry="36" transform={`rotate(40 ${CX + 108} ${CY - 116})`} />
         </g>
 
         {/* body */}
-        <circle cx={CX} cy={CY} r={R_BEZEL} fill="url(#bezelFill)" stroke="#8E1F16" strokeWidth="3" />
-        <circle cx={CX} cy={CY} r={R_BEZEL - 9} fill="none" stroke="#FF8B72" strokeWidth="3" opacity="0.45" />
-        <circle cx={CX} cy={CY} r={R_DIAL} fill="url(#dialFill)" stroke="#8E1F16" strokeWidth="2.5" />
+        <circle cx={CX} cy={CY} r={R_BEZEL} fill="#D9523F" stroke="#8E3325" strokeWidth="3.5" />
+        <circle cx={CX} cy={CY} r={R_BEZEL - 11} fill="none" stroke="#EE7C64" strokeWidth="4" opacity="0.5" />
+        <circle cx={CX} cy={CY} r={R_DIAL} fill="#FBF3DF" stroke="#8E3325" strokeWidth="3" />
       </g>
+
+      {/* paper grain on the dial */}
+      <circle
+        cx={CX}
+        cy={CY}
+        r={R_DIAL - 2}
+        filter="url(#grain)"
+        opacity="0.16"
+        style={{ mixBlendMode: 'multiply' }}
+      />
 
       {ticks}
       {numbers}
@@ -238,15 +244,15 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
       <path
         d={arcPath(startAngle, overAnHour ? sweep - 360 : sweep, R_ARC)}
         fill="none"
-        stroke="#F2B233"
-        strokeWidth="13"
+        stroke="#F0A82A"
+        strokeWidth="14"
         strokeLinecap="round"
         opacity="0.92"
         className="arc"
       />
 
       {/* now hands */}
-      <g stroke="#241E1A" strokeLinecap="round" className="now-hands">
+      <g stroke="#33291F" strokeLinecap="round" className="now-hands">
         <line
           x1={CX}
           y1={CY}
@@ -274,12 +280,12 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
           strokeWidth="6"
           strokeLinecap="round"
         />
-        <circle cx={knobX} cy={knobY} r="13" fill="#E8A831" stroke="#8C5A12" strokeWidth="2.5" />
+        <circle cx={knobX} cy={knobY} r="13" fill="#F0A82A" stroke="#8C5A12" strokeWidth="2.5" />
         <circle cx={knobX} cy={knobY} r="5" fill="#FFF3D4" opacity="0.8" />
       </g>
 
-      <circle cx={CX} cy={CY} r="9" fill="#241E1A" />
-      <circle cx={CX} cy={CY} r="3.5" fill="#F6E6C4" />
+      <circle cx={CX} cy={CY} r="9.5" fill="#33291F" />
+      <circle cx={CX} cy={CY} r="3.5" fill="#FBF3DF" />
 
       {/* interaction surface */}
       <circle
