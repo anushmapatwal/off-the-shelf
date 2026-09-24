@@ -366,7 +366,7 @@ body {
 .shelf-bg {
   position: absolute;
   inset: -3%;
-  background: url('/art/shelf-v2.webp') center / cover no-repeat;
+  background: url('/art/shelf-v3.webp') center / cover no-repeat;
   transform: scale(1);
   filter: blur(0px);
   transition: transform 1400ms cubic-bezier(0.22, 1, 0.36, 1), filter 900ms ease;
@@ -567,17 +567,17 @@ body {
   /* the book is too small on a phone to write inside, so it opens at the top
      and its pages are laid out as a sheet of paper underneath it */
   .book {
-    width: 92vw;
-    top: 30%;
+    width: min(42vw, 22vh);
+    top: 15%;
   }
 
   .book-pages {
-    left: 2vw;
-    right: 2vw;
+    left: calc(50% - 46vw);
+    right: calc(50% - 46vw);
     top: 100%;
     bottom: auto;
-    max-height: 44vh;
-    margin-top: 16px;
+    max-height: 58vh;
+    margin-top: clamp(14px, 3vh, 26px);
     flex-direction: column;
     gap: 18px;
     background: #fdf9f9;
