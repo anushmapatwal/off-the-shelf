@@ -41,7 +41,10 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  const shelf = [...saved, ...SAMPLE_SHELF]
+  // ?empty in the URL shows the empty-shelf state without clearing what you saved
+  const forceEmpty =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('empty')
+  const shelf = forceEmpty ? [] : [...saved, ...SAMPLE_SHELF]
   const minutesLeft = Math.max(0, (endMs - now.getTime()) / 60000)
   const endDate = new Date(endMs)
   const fits = thatFit(minutesLeft, shelf)
@@ -100,10 +103,13 @@ export default function App() {
       {sheet === 'shelf' && (
         <ShelfScene
           items={fits}
+          all={shelf}
           best={pick}
           rest={rest}
+          minutes={minutesLeft}
           minutesLabel={formatDuration(minutesLeft)}
           endLabel={formatTime(endDate)}
+          onAdd={() => setSheet('save')}
           onClose={() => setSheet(null)}
         />
       )}
