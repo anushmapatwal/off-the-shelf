@@ -31,20 +31,29 @@ export async function metaFromUrl(input) {
 
 async function youtube(url) {
   const id = youtubeId(url)
+  const notes = []
   let title = ''
   let source = ''
-  let minutes = null
+  let seconds = null
 
-  try {
-    const html = await fetchText(id ? `https://www.youtube.com/watch?v=${id}` : url)
-    const seconds = Number(
-      first(html, /"lengthSeconds"\s*:\s*"(\d+)"/) || first(html, /"approxDurationMs"\s*:\s*"(\d+)"/) / 1000
-    )
-    if (Number.isFinite(seconds) && seconds > 0) minutes = Math.max(1, Math.round(seconds / 60))
-    title = clean(first(html, /"title"\s*:\s*"([^"]{2,200})"/) || meta(html, 'og:title'))
-    source = clean(first(html, /"ownerChannelName"\s*:\s*"([^"]{1,120})"/))
-  } catch {
-    /* the watch page can refuse us — oEmbed below still gives a title */
+  /* The watch page carries everything, when YouTube feels like serving it to a
+     server. The embed page is smaller and often answers when the watch page
+     doesn't. oEmbed always answers but never says how long the video is. */
+  for (const page of [
+    id && `https://www.youtube.com/watch?v=${id}&hl=en`,
+    id && `https://www.youtube.com/embed/${id}?hl=en`,
+  ].filter(Boolean)) {
+    if (title && seconds) break
+    try {
+      const html = await fetchText(page)
+      const found = fromYoutubeHtml(html)
+      title = title || found.title
+      source = source || found.source
+      seconds = seconds || found.seconds
+      notes.push(`${page.includes('/embed/') ? 'embed' : 'watch'}: ${found.title ? 'title ' : ''}${found.seconds ? 'length ' : ''}${found.source ? 'channel' : ''}`.trim())
+    } catch (err) {
+      notes.push(`${page.includes('/embed/') ? 'embed' : 'watch'} refused: ${err.message}`)
+    }
   }
 
   if (!title || !source) {
@@ -54,20 +63,59 @@ async function youtube(url) {
       )
       title = title || clean(j.title)
       source = source || clean(j.author_name)
-    } catch {
-      /* nothing more to try */
+      notes.push('oembed: title, channel')
+    } catch (err) {
+      notes.push(`oembed refused: ${err.message}`)
     }
   }
 
-  if (!title) return { ok: false, reason: "Couldn't read that video." }
+  if (!title) return { ok: false, reason: "Couldn't read that video.", notes }
 
   return finish({
-    title,
+    title: tidyTitle(title),
     source: source || 'YouTube',
     type: 'Video',
-    minutes,
+    minutes: seconds ? Math.max(1, Math.round(seconds / 60)) : null,
     fallbackMinutes: DEFAULT_MINUTES.Video,
+    notes,
   })
+}
+
+/* Pull the three facts out of a YouTube page, from the narrowest source first.
+   The loose hunt for any "title" in the page is deliberately not done here —
+   a watch page has dozens of them and most belong to something else. */
+export function fromYoutubeHtml(html) {
+  const details =
+    html.match(/"videoDetails"\s*:\s*\{[\s\S]{0,8000}?"isLiveContent"\s*:\s*(?:true|false)/)?.[0] || ''
+
+  const seconds =
+    numberOrNull(first(details, /"lengthSeconds"\s*:\s*"?(\d+)"?/)) ??
+    numberOrNull(first(html, /"lengthSeconds"\s*:\s*"?(\d+)"?/)) ??
+    isoDuration(meta(html, 'duration', 'itemprop')) ??
+    milliseconds(first(html, /"approxDurationMs"\s*:\s*"?(\d{4,})"?/))
+
+  const title =
+    clean(jsonString(details, 'title')) ||
+    clean(meta(html, 'og:title')) ||
+    clean(meta(html, 'title', 'name'))
+
+  const source =
+    clean(jsonString(details, 'author')) ||
+    clean(first(html, /"ownerChannelName"\s*:\s*"((?:[^"\\]|\\.)*)"/)) ||
+    clean(first(html, /<link[^>]+itemprop=["\']name["\'][^>]+content=["\']([^"\']+)["\']/i))
+
+  return { title, source, seconds }
+}
+
+/* a JSON string value, with escaped quotes inside it left intact */
+function jsonString(source, key) {
+  const m = source.match(new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`))
+  return m?.[1] || ''
+}
+
+function numberOrNull(value) {
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : null
 }
 
 async function vimeo(url) {
@@ -115,15 +163,17 @@ async function generic(url, host) {
 
   if (!title) return { ok: false, reason: "Couldn't read that page." }
 
-  return finish({ title, source, type, minutes, fallbackMinutes: DEFAULT_MINUTES[type] ?? 8 })
+  const notes = [stated ? 'length stated by the page' : minutes ? 'length from the word count' : 'page gave no length']
+  return finish({ title, source, type, minutes, fallbackMinutes: DEFAULT_MINUTES[type] ?? 8, notes })
 }
 
 /* ---------- when the page won't say how long it is ---------- */
 
-async function finish({ title, source, type, minutes, fallbackMinutes }) {
-  if (minutes) return { ok: true, title, source, type, minutes, estimated: false }
+async function finish({ title, source, type, minutes, fallbackMinutes, notes = [] }) {
+  if (minutes) return { ok: true, title, source, type, minutes, estimated: false, notes }
 
   const guess = await minutesFromClaude({ title, source, type })
+  notes.push(guess ? 'length estimated by Claude' : 'length fell back to a default for the type')
   return {
     ok: true,
     title,
@@ -131,6 +181,7 @@ async function finish({ title, source, type, minutes, fallbackMinutes }) {
     type,
     minutes: guess ?? fallbackMinutes,
     estimated: true,
+    notes,
   }
 }
 
@@ -329,7 +380,13 @@ async function fetchText(url) {
     fetch(url, {
       signal,
       redirect: 'follow',
-      headers: { 'user-agent': UA, accept: 'text/html,application/xhtml+xml', 'accept-language': 'en' },
+      headers: {
+        'user-agent': UA,
+        accept: 'text/html,application/xhtml+xml',
+        'accept-language': 'en-US,en;q=0.9',
+        // skips the consent interstitial some Google properties serve to servers
+        cookie: 'CONSENT=YES+1; SOCS=CAI',
+      },
     })
   )
   if (!res.ok) throw new Error(`the page answered ${res.status}`)
