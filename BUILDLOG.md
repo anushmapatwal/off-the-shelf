@@ -46,3 +46,29 @@ illustration with live hands, a time arc and a drag handle drawn over it.
   and clickable.
 - Reduced-motion skips straight to the open book.
 
+
+## 24 September 2026 — Session 3: saving, and the two quiet states
+
+**Shipped:** "Save to shelf" — a dialog that takes a link and guesses the type,
+the source and a length from the URL, then keeps it on this device. And the two
+states the book had been skipping over.
+
+*Not enough time.* The book used to say "Nothing fits that window" and then show
+an empty heading on the right-hand page. It now says how short you are — "the
+shortest thing here is 6 min and you have 3" — and lists the shelf shortest
+first, so the gap is something you can act on.
+
+*An empty shelf.* The idea this app started from: one book on an empty shelf
+that asks to be filled. The left page reads "Nothing here yet", with a single
+action — *Add to this shelf* — and the right page is left genuinely blank.
+
+**Decisions**
+
+- The no-fit copy names the number, not the failure. "Nudge the clock a little"
+  is a move; "nothing fits" is a dead end.
+- The empty page has one action, not two. A second choice at the moment of
+  having nothing is a way of avoiding the first.
+- On a phone the book is too small to write inside, so it opens at the top and
+  its pages are laid out on a sheet of paper below it.
+- `?empty` in the URL shows the empty state without clearing what you saved —
+  useful for screenshots of a state you can only see once.
