@@ -29,6 +29,49 @@ export async function metaFromUrl(input) {
 
 /* ---------- the sites worth special-casing ---------- */
 
+/* A window into what YouTube actually served us. /api/meta?url=…&debug=1 */
+export async function probeYoutube(input) {
+  const url = normalize(input)
+  if (!url) return [{ error: 'not a link' }]
+  const id = youtubeId(url)
+  const out = []
+
+  for (const page of [
+    id && `https://www.youtube.com/watch?v=${id}&hl=en`,
+    id && `https://www.youtube.com/embed/${id}?hl=en`,
+    `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+  ].filter(Boolean)) {
+    try {
+      const res = await withTimeout((signal) =>
+        fetch(page, {
+          signal,
+          headers: {
+            'user-agent': UA,
+            'accept-language': 'en-US,en;q=0.9',
+            cookie: 'CONSENT=YES+1; SOCS=CAI',
+          },
+        })
+      )
+      const text = (await res.text()).slice(0, MAX_BYTES)
+      out.push({
+        page: page.replace(/\?.*/, '').replace('https://www.youtube.com', ''),
+        status: res.status,
+        bytes: text.length,
+        documentTitle: first(text, /<title[^>]*>([\s\S]{0,140}?)<\/title>/i) || null,
+        hasVideoDetails: text.includes('videoDetails'),
+        lengthSecondsSeen: first(text, /"lengthSeconds"\s*:\s*"?(\d+)"?/) || null,
+        itempropDuration: meta(text, 'duration', 'itemprop') || null,
+        parsed: text.startsWith('{') ? null : fromYoutubeHtml(text),
+      })
+    } catch (err) {
+      out.push({ page, error: String(err?.message || err) })
+    }
+  }
+  return out
+}
+
+
+
 async function youtube(url) {
   const id = youtubeId(url)
   const notes = []

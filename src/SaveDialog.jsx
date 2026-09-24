@@ -87,7 +87,13 @@ export default function SaveDialog({ onSave, onClose }) {
         setEstimated(Boolean(data.estimated))
       }
       setStatus('read')
-      setNote(data.estimated ? 'The length is an estimate — change it if you know better.' : '')
+      setNote(
+        !data.estimated
+          ? ''
+          : data.type === 'Video' || data.type === 'Podcast'
+            ? "Filled in, but the length didn't come through — set the minutes yourself."
+            : 'The length is an estimate — change it if you know better.'
+      )
     } catch {
       if (id !== request.current) return
       setStatus('failed')
@@ -183,6 +189,7 @@ export default function SaveDialog({ onSave, onClose }) {
             <label className="field field-short">
               <span>Minutes</span>
               <input
+                className={estimated ? 'is-estimate' : undefined}
                 type="number"
                 min="1"
                 max="600"
