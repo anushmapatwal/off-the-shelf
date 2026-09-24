@@ -72,3 +72,29 @@ action — *Add to this shelf* — and the right page is left genuinely blank.
   its pages are laid out on a sheet of paper below it.
 - `?empty` in the URL shows the empty state without clearing what you saved —
   useful for screenshots of a state you can only see once.
+
+## 25 September 2026 — Session 4: the link reads itself
+
+**Shipped:** paste a link into *Save to shelf* and the form fills itself in —
+title, source, type and length. `/api/meta` fetches the page and reads it:
+OpenGraph tags for the title and publication, `lengthSeconds` for a YouTube
+video, `music:duration` or a JSON-LD `PT1H4M20S` for a podcast or talk, and a
+word count at 220 words a minute for an article. Where a page still won't say
+how long it is, Claude Haiku is asked for an estimate from the title and type,
+and the number is marked as one.
+
+**Decisions**
+
+- It never overwrites you. Each field remembers whether you typed in it; the
+  reader fills only what you haven't touched.
+- The same code answers `/api/meta` on Vercel and in `npm run dev`, through a
+  small Vite middleware — so the dev server isn't a different app.
+- Timeouts are set so the whole thing answers inside Vercel's 10 seconds:
+  6s for the page, 3.5s for the estimate.
+- Podcast pages don't use the OpenGraph duration tag; they bury the number in
+  the JSON they ship to their own player. Apple counts in milliseconds under
+  `durationInMilliseconds`, Spotify under `duration_ms`, and both name the show
+  in there too — so an episode saves with its real length and the show's name,
+  with no API key anywhere.
+- A failed read is not a dead end. The address bar guess (type and a default
+  length from the domain) stays in the form, and the status line says so.

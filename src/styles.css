@@ -658,6 +658,41 @@ body {
   color: var(--red);
 }
 
+/* what the link reader is doing */
+
+.dialog-status {
+  margin: -4px 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 18px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--muted);
+  transition: color 200ms ease;
+}
+
+.dialog-status.is-read {
+  color: #4a7c59;
+}
+
+.dialog-status.is-failed {
+  color: var(--red);
+}
+
+.dialog-status .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: pulse 900ms ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .field {
   display: flex;
   flex-direction: column;
