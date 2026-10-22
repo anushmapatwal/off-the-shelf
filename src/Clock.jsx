@@ -1,15 +1,22 @@
 import React, { useCallback, useEffect, useRef } from 'react'
 
-/* The clock is Anushma's illustration (public/art/clock-face.webp) with the
-   hands, the time arc and the drag handle drawn over it in SVG.
-   Coordinates below are in the illustration's own pixel space (2400 x 3040),
-   measured from the artwork: the dial centre and radius. */
+/* The clock is the yellow alarm clock illustration (public/art/home/clock.png)
+   with the hands, the time arc and the drag handle drawn over it in SVG.
+   Coordinates below are in the illustration's own pixel space (1024 x 1024),
+   measured from the artwork: the dial centre and radius.
 
-const VB_W = 2400
-const VB_H = 3040
-const CX = 1188
-const CY = 1747
-const R_DIAL = 795
+   The illustration has hands painted in, stopped at eight o'clock. A disc in
+   the dial's own colour covers them — it ends at R_COVER, inside the tick
+   marks (which start at 206px), so only the painted hands disappear. */
+
+const VB_W = 1024
+const VB_H = 1024
+const CX = 518.8
+const CY = 553.9
+const R_DIAL = 272
+const R_COVER = 190
+const DIAL_COLOUR = '#F1F6FC'
+const S = R_DIAL / 795 // sizes below were drawn for the old 795px dial
 
 const R_ARC = R_DIAL * 0.84
 const R_KNOB = R_DIAL * 0.84
@@ -63,7 +70,7 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
       const vbY = ((clientY - rect.top) / rect.height) * VB_H
       const dx = vbX - CX
       const dy = vbY - CY
-      if (Math.hypot(dx, dy) < 80) return null
+      if (Math.hypot(dx, dy) < 80 * S) return null
       let ang = (Math.atan2(dx, -dy) * 180) / Math.PI
       if (ang < 0) ang += 360
 
@@ -154,27 +161,29 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
     >
-      <img className="clock-art" src="/art/clock-face.webp" alt="" draggable="false" />
+      <img className="clock-art" src="/art/home/clock.png" alt="" draggable="false" />
 
       <svg className="clock-layer" viewBox={`0 0 ${VB_W} ${VB_H}`} aria-hidden="true">
+        <circle cx={CX} cy={CY} r={R_COVER} fill={DIAL_COLOUR} />
+
         {/* the time you have */}
         {overAnHour && (
-          <circle cx={CX} cy={CY} r={R_ARC} fill="none" stroke="#4280CF" strokeWidth="52" opacity="0.22" />
+          <circle cx={CX} cy={CY} r={R_ARC} fill="none" stroke="#496044" strokeWidth={52 * S} opacity="0.22" />
         )}
         <path
           className="arc"
           d={arcPath(startAngle, overAnHour ? sweep - 360 : sweep, R_ARC)}
           fill="none"
-          stroke="#4280CF"
-          strokeWidth="52"
+          stroke="#496044"
+          strokeWidth={52 * S}
           strokeLinecap="round"
           opacity="0.75"
         />
 
         {/* now */}
-        <g fill="#1F1B18">
-          <path d={handPath(hourAngle(now), HOUR_LEN, 58)} />
-          <path d={handPath(startAngle, MIN_LEN, 42)} />
+        <g fill="#434C51">
+          <path d={handPath(hourAngle(now), HOUR_LEN, 58 * S)} />
+          <path d={handPath(startAngle, MIN_LEN, 42 * S)} />
         </g>
 
         {/* the end time you drag */}
@@ -184,15 +193,15 @@ export default function Clock({ now, endMs, setEndMs, minMinutes, maxMinutes, dr
             y1={CY}
             x2={knobX}
             y2={knobY}
-            stroke="#E2412B"
-            strokeWidth="26"
+            stroke="#FC6743"
+            strokeWidth={26 * S}
             strokeLinecap="round"
           />
-          <circle cx={knobX} cy={knobY} r="62" fill="#E2412B" stroke="#FFFFFF" strokeWidth="14" />
+          <circle cx={knobX} cy={knobY} r={62 * S} fill="#FC6743" stroke="#FFFFFF" strokeWidth={14 * S} />
         </g>
 
-        <circle cx={CX} cy={CY} r="44" fill="#1F1B18" />
-        <circle cx={CX} cy={CY} r="16" fill="#FDFBF4" />
+        {/* the orange hub, as in the illustration */}
+        <circle cx={CX} cy={CY} r={29} fill="#FBBC4B" />
       </svg>
     </div>
   )

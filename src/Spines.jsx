@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 /* The shelf as a row of spines.
    Hover a spine and it lifts; press it and the book turns out to face you,
    showing its cover, while the books beside it slide over to make room.
+   One book is out at a time: taking another puts the first one back.
    A spine's thickness is how long the thing takes.
    Pass `pick` and that book comes off the shelf on its own, a moment after
    the shelf appears. Whatever goes in `children` sits above the row. */
@@ -88,7 +89,7 @@ function Motif({ type }) {
 }
 
 export default function Spines({ items, pick, onAdd, children }) {
-  const [open, setOpen] = useState(() => new Set())
+  const [openId, setOpenId] = useState(null)
   const [focus, setFocus] = useState(null) // the book the caption is about
   const [hover, setHover] = useState(null)
   const rowRef = useRef(null)
@@ -96,30 +97,20 @@ export default function Spines({ items, pick, onAdd, children }) {
   useEffect(() => {
     if (!pick) return
     const t = setTimeout(() => {
-      setOpen(new Set([pick]))
+      setOpenId(pick)
       setFocus(pick)
     }, 650)
     return () => clearTimeout(t)
   }, [pick])
 
   const toggle = (item, el) => {
-    setOpen((prev) => {
-      const next = new Set(prev)
-      next.has(item.id) ? next.delete(item.id) : next.add(item.id)
-      return next
-    })
+    setOpenId((prev) => (prev === item.id ? null : item.id))
     setFocus(item.id)
     // once it has turned, make sure the whole cover is in view
     setTimeout(() => el?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }), 520)
   }
 
-  const putBack = (id) => {
-    setOpen((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
-  }
+  const putBack = () => setOpenId(null)
 
   const scrollBy = (dir) => {
     const row = rowRef.current
@@ -151,7 +142,7 @@ export default function Spines({ items, pick, onAdd, children }) {
         )}
         {items.map((item) => {
           const look = bookLook(item)
-          const isOpen = open.has(item.id)
+          const isOpen = openId === item.id
           return (
             <button
               key={item.id}
@@ -180,7 +171,6 @@ export default function Spines({ items, pick, onAdd, children }) {
                   <span className="spine-min">{item.minutes}′</span>
                 </span>
                 <span className="spine-cover">
-                  <span className="cover-kicker">Off the Shelf</span>
                   <span className="cover-motif">
                     <Motif type={item.type} />
                   </span>
@@ -191,11 +181,12 @@ export default function Spines({ items, pick, onAdd, children }) {
                   </span>
                 </span>
               </span>
-              <span className="spine-shadow" aria-hidden="true" />
             </button>
           )
         })}
       </div>
+
+      <div className="spines-plank" aria-hidden="true" />
 
       <div className="spines-caption" aria-live="polite">
         {shown && (
@@ -205,12 +196,12 @@ export default function Spines({ items, pick, onAdd, children }) {
             <span className="cap-meta">
               {shown.minutes} min · {shown.source || shown.type}
             </span>
-            {open.has(shown.id) && (
+            {openId === shown.id && (
               <>
                 <a className="cap-link" href={shown.url} target="_blank" rel="noreferrer">
                   Open it →
                 </a>
-                <button className="cap-link" onClick={() => putBack(shown.id)}>
+                <button className="cap-link" onClick={putBack}>
                   Put back
                 </button>
               </>

@@ -7,6 +7,7 @@ import SaveDialog from './SaveDialog.jsx'
 import SpinesPreview from './SpinesPreview.jsx'
 import { loadSaved, persist } from './storage.js'
 import { SAMPLE_SHELF, thatFit, bestFit } from './shelf.js'
+import { PICKS } from './picks.js'
 
 const MIN_MINUTES = 3
 const MAX_MINUTES = 180
@@ -36,7 +37,7 @@ export default function App() {
 function ClockPage() {
   const [now, setNow] = useState(() => new Date())
   const [dragging, setDragging] = useState(false)
-  const [sheet, setSheet] = useState(null) // 'shelf' | 'save' | null
+  const [sheet, setSheet] = useState(null) // 'shelf' | 'picks' | 'save' | null
   const [saved, setSaved] = useState(() => loadSaved())
 
   const [endMs, setEndMs] = useState(() => {
@@ -68,29 +69,31 @@ function ClockPage() {
 
   return (
     <div className="scene">
-      <div className="scene-bg" aria-hidden="true" />
-      <div className="scene-tint" aria-hidden="true" />
+      <div className="scene-grid" aria-hidden="true" />
 
       <main className="stage">
         <Card>
           <Logo />
 
-          <p className="headline">How much time do you have?</p>
+          <div className="time">
+            <p className="headline">How much time do you have?</p>
 
-          <div className="readout" aria-live="polite">
-            <span>Until {formatTime(endDate)}</span>
-            <span className="readout-dot" aria-hidden="true" />
-            <span>{formatDuration(minutesLeft)}</span>
+            <div className="readout-group">
+              <div className="readout" aria-live="polite">
+                <span>Until {formatTime(endDate)}</span>
+                <img className="readout-dot" src="/art/home/dot.svg" alt="" />
+                <span>{formatDuration(minutesLeft)}</span>
+              </div>
+              <p className="hint">Drag the clock hand to change the time.</p>
+            </div>
           </div>
-
-          <p className="hint">Drag the clock hand to change the time.</p>
 
           <div className="actions">
             <button className="btn-solid" onClick={() => setSheet('shelf')}>
               From your shelf
             </button>
-            <button className="btn-outline" onClick={() => setSheet('save')}>
-              Save to shelf
+            <button className="btn-outline" onClick={() => setSheet('picks')}>
+              Suggest Me
             </button>
           </div>
         </Card>
@@ -108,8 +111,9 @@ function ClockPage() {
         </div>
       </main>
 
-      {sheet === 'shelf' && (
+      {(sheet === 'shelf' || sheet === 'picks') && (
         <ShelfScene
+          picks={sheet === 'picks' ? PICKS : null}
           items={fits}
           all={shelf}
           best={pick}
