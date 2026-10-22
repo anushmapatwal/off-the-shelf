@@ -4,6 +4,7 @@ import Logo from './Logo.jsx'
 import Card from './Card.jsx'
 import ShelfScene from './ShelfScene.jsx'
 import SaveDialog from './SaveDialog.jsx'
+import SpinesPreview from './SpinesPreview.jsx'
 import { loadSaved, persist } from './storage.js'
 import { SAMPLE_SHELF, thatFit, bestFit } from './shelf.js'
 
@@ -26,6 +27,13 @@ function formatDuration(mins) {
 }
 
 export default function App() {
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('spines')) {
+    return <SpinesPreview />
+  }
+  return <ClockPage />
+}
+
+function ClockPage() {
   const [now, setNow] = useState(() => new Date())
   const [dragging, setDragging] = useState(false)
   const [sheet, setSheet] = useState(null) // 'shelf' | 'save' | null
@@ -45,11 +53,11 @@ export default function App() {
   const forceEmpty =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('empty')
   const shelf = forceEmpty ? [] : [...saved, ...SAMPLE_SHELF]
-  const minutesLeft = Math.max(0, (endMs - now.getTime()) / 60000)
+  // whole minutes, so what fits always agrees with the number on screen
+  const minutesLeft = Math.max(0, Math.round((endMs - now.getTime()) / 60000))
   const endDate = new Date(endMs)
   const fits = thatFit(minutesLeft, shelf)
   const pick = bestFit(minutesLeft, shelf)
-  const rest = fits.filter((i) => i.id !== pick?.id)
 
   const addToShelf = (item) => {
     const next = [item, ...saved]
@@ -105,7 +113,6 @@ export default function App() {
           items={fits}
           all={shelf}
           best={pick}
-          rest={rest}
           minutes={minutesLeft}
           minutesLabel={formatDuration(minutesLeft)}
           endLabel={formatTime(endDate)}
